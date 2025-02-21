@@ -56,6 +56,10 @@ ranking_file = st.sidebar.selectbox(
 file_path = f'data/{ranking_file}'
 df = carica_dati(file_path, sheet_name='Sheet1')
 
+# Mostra i nomi delle colonne disponibili (utile per debug)
+if df is not None:
+    st.write("Nomi delle colonne nel dataset:", df.columns.tolist())
+
 # Navigazione tra le pagine
 page = st.sidebar.radio('Seleziona una Pagina', 
                         ['Classifica Generale', 
