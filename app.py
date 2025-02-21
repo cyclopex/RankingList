@@ -13,7 +13,7 @@ st.set_page_config(
 st.title('🏅 Dashboard Ranking Judo')
 st.markdown(
     """
-    ## 🎮 Benvenuto nella tua dashboard interattiva
+    ## Benvenuto nella tua dashboard interattiva
     **Naviga e analizza le tue classifiche in modo semplice!**
     """
 )
@@ -160,11 +160,11 @@ if page == 'Classifica Generale per Società':
         classifica_societa['MediaPuntiPerAtleta'] = classifica_societa['PuntiTotali'] / classifica_societa['NumeroAtleti']
         st.dataframe(classifica_societa, use_container_width=True)
 
-# --- TOP TEN ---
-if page == 'TOP TEN':
-    st.header('🏆 TOP TEN')
+# --- Top 10 ---
+if page == 'Top 10':
+    st.header('🏆 Top 10')
     if df is not None:
-        st.subheader('TOP TEN Totale')
+        st.subheader('Top 10 Totale')
         df_top_ten_totale = df.sort_values(by='Punti', ascending=False).head(10)
         st.dataframe(df_top_ten_totale, use_container_width=True)
         
