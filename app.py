@@ -164,16 +164,16 @@ if page == 'Classifica Generale per Società':
 if page == 'TOP TEN':
     st.header('🏆 TOP TEN')
     if df is not None:
+        # Mostra solo la TOP TEN Totale
         st.subheader('TOP TEN Totale')
         df_top_ten_totale = df.sort_values(by='Punti', ascending=False).head(10)
-        st.dataframe(df_top_ten_totale, use_container_width=True)
-        
-        st.subheader('TOP TEN Atleti dell\'Anno (escludendo Bonus)')
-        colonne_gare = [col for col in df.columns if col not in ['Bonus2024', 'Bonus2023', 'Punti']]
-        if colonne_gare:
-            df[colonne_gare] = df[colonne_gare].apply(pd.to_numeric, errors='coerce')
-            df['Punti_Gare'] = df[colonne_gare].sum(axis=1)
-            df_top_ten_gare = df.sort_values(by='Punti_Gare', ascending=False).head(10)
-            st.dataframe(df_top_ten_gare, use_container_width=True)
+
+        # Mostra solo le colonne desiderate
+        colonne_da_mostrare = ['Categoria', 'Nome', 'Data Nascita', 'Società', 'Ranking', 'Punti']
+        if all(col in df_top_ten_totale.columns for col in colonne_da_mostrare):
+            df_top_ten_filtrato = df_top_ten_totale[colonne_da_mostrare]
+            # Rimuovi eventuali zeri finali dai dati numerici
+            df_top_ten_filtrato = df_top_ten_filtrato.fillna('')
+            st.dataframe(df_top_ten_filtrato, use_container_width=True)
         else:
-            st.warning("Non ci sono colonne relative alle gare nel dataset.")
+            st.warning("Le colonne necessarie non sono presenti nel dataset.")
