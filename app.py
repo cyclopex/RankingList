@@ -6,14 +6,14 @@ import plotly.express as px
 st.set_page_config(
     page_title='Dashboard Ranking Judo',
     layout='wide',
-    initial_sidebar_state='collapsed'  # Sidebar inizialmente nascosta
+    initial_sidebar_state='expanded'  # Sidebar aperta al caricamento
 )
 
 # Titolo principale con emoji e stile visivo
 st.title('🏅 Dashboard Ranking Judo')
 st.markdown(
     """
-    ## Benvenuto nella tua dashboard interattiva
+    ## 🎮 Benvenuto nella tua dashboard interattiva
     **Naviga e analizza le tue classifiche in modo semplice!**
     """
 )
@@ -160,11 +160,11 @@ if page == 'Classifica Generale per Società':
         classifica_societa['MediaPuntiPerAtleta'] = classifica_societa['PuntiTotali'] / classifica_societa['NumeroAtleti']
         st.dataframe(classifica_societa, use_container_width=True)
 
-# --- Top 10 ---
-if page == 'Top 10':
-    st.header('🏆 Top 10')
+# --- TOP TEN ---
+if page == 'TOP TEN':
+    st.header('🏆 TOP TEN')
     if df is not None:
-        st.subheader('Top 10 Totale')
+        st.subheader('TOP TEN Totale')
         df_top_ten_totale = df.sort_values(by='Punti', ascending=False).head(10)
         st.dataframe(df_top_ten_totale, use_container_width=True)
         
