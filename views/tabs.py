@@ -1,11 +1,9 @@
-# views/tabs.py
-
 import streamlit as st
 import pandas as pd
 from modules.data_loader import carica_dati
 from config.settings import EXCEL_FILES, SHEET_NAME
 from io import BytesIO
-
+from pathlib import Path
 
 # Costante per il numero di risultati per pagina
 RISULTATI_PER_PAGINA = 10
@@ -14,7 +12,7 @@ def classifica_generale():
     st.markdown("### 🏆 Classifica Generale")
     st.divider()
 
-# Selettore di Ranking List con l'aggiunta di "Tutte"
+    # Selettore di Ranking List con l'aggiunta di "Tutte"
     ranking_options = ['Tutte'] + list(EXCEL_FILES.keys())
     ranking_file = st.selectbox(
         '🏆 Seleziona una Ranking List', 
@@ -22,18 +20,31 @@ def classifica_generale():
         key="ranking_generale"
     )
 
-    # Caricamento dati
+    # Caricamento dati con gestione errori per file mancanti
+    df = pd.DataFrame()
     if ranking_file == 'Tutte':
-        # Se viene selezionato "Tutte", concatena tutti i DataFrame
-        dfs = [carica_dati(EXCEL_FILES[file], sheet_name=SHEET_NAME) for file in EXCEL_FILES.keys()]
-        df = pd.concat(dfs, ignore_index=True)
+        dfs = []
+        for file in EXCEL_FILES.keys():
+            file_path = Path(EXCEL_FILES[file])
+            if not file_path.is_file():
+                st.warning(f"⚠️ Ranking {file} non presente.")
+                continue
+            df_temp = carica_dati(file_path, sheet_name=SHEET_NAME)
+            dfs.append(df_temp)
+        if dfs:
+            df = pd.concat(dfs, ignore_index=True)
     else:
-        # Altrimenti carica solo la RL selezionata
-        file_path = EXCEL_FILES[ranking_file]
-        df = carica_dati(file_path, sheet_name=SHEET_NAME)
+        file_path = Path(EXCEL_FILES[ranking_file])
+        if not file_path.is_file():
+            st.warning(f"⚠️ Ranking {ranking_file} non presente.")
+        else:
+            df = carica_dati(file_path, sheet_name=SHEET_NAME)
 
+    if df.empty:
+        st.info("Nessun dato disponibile.")
+        return
 
-# --- FILTRO SESSO (PRIMA SCELTA) ---
+    # --- FILTRO SESSO (PRIMA SCELTA) ---
     sesso = st.selectbox(
         '👫 Seleziona Sesso',
         ['Tutti', 'Maschi', 'Femmine'],
@@ -84,7 +95,7 @@ def classifica_generale():
         )
         if societa != 'Tutte':
             df = df[df['Società'] == societa]
-            df = df.sort_values(by='Ranking', ascending=True)  # ORDINA PER RANK
+            df = df.sort_values(by='Ranking', ascending=True)
     else:
         st.warning("❗ La colonna 'Società' non è presente in questa Ranking List.")
 
@@ -162,6 +173,10 @@ def classifica_generale():
                 color: #A6A9B6;
                 font-size: 0.9em;
             }
+            .category strong {
+                font-weight: bold;
+                color: #FFD700;
+            }
             .points {
                 color: #FFD700;
                 font-weight: bold;
@@ -188,7 +203,7 @@ def classifica_generale():
                 </div>
                 <div class='details'>
                     <span class='name'>{nome}</span><br>
-                    <span class='category'>{categoria} kg - {societa}</span>
+                    <span class='category'><strong>{categoria} kg</strong> - {societa}</span>
                 </div>
                 <div class='points'>
                     {punti} Punti
@@ -197,17 +212,15 @@ def classifica_generale():
         """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-        # --- NAVIGAZIONE PAGINAZIONE ---
+# --- NAVIGAZIONE PAGINAZIONE ---
     col1, col2, col3 = st.columns([1, 2, 1])
     with col1:
         if st.button("⬅️ Precedente", disabled=(pagina_corrente == 1)):
             st.session_state.pagina_corrente_generale -= 1
             st.rerun()
-            st.set_query_params(pagina=st.session_state.pagina_corrente_generale)
     with col2:
         st.markdown(f"<div style='text-align: center;'>Pagina {pagina_corrente} di {totale_pagine}</div>", unsafe_allow_html=True)
     with col3:
         if st.button("➡️ Successivo", disabled=(pagina_corrente == totale_pagine)):
             st.session_state.pagina_corrente_generale += 1
             st.rerun()
-

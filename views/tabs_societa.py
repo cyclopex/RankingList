@@ -1,9 +1,8 @@
-# views/tabs_societa.py
-
 import streamlit as st
+import pandas as pd
 from modules.data_loader import carica_dati
 from config.settings import EXCEL_FILES, SHEET_NAME
-import pandas as pd
+from pathlib import Path
 
 # Costante per il numero di risultati per pagina
 RISULTATI_PER_PAGINA = 10
@@ -12,7 +11,7 @@ def classifica_societa():
     st.markdown("### 🏢 Classifica Società")
     st.divider()
 
-    # --- AGGIUNGIAMO "Tutte" AL SELETTORE DI RANKING LIST ---
+    # Selettore di Ranking List con l'aggiunta di "Tutte"
     ranking_options = ['Tutte'] + list(EXCEL_FILES.keys())
     ranking_file = st.selectbox(
         '🏆 Seleziona una Ranking List', 
@@ -20,43 +19,45 @@ def classifica_societa():
         key="ranking_societa"
     )
 
-    # --- SE È SELEZIONATO "Tutte", SOMMIAMO I PUNTI DI TUTTE LE RANKING ---
+    # Caricamento dati con gestione errori per file mancanti
+    df = pd.DataFrame()
     if ranking_file == 'Tutte':
-        # Carichiamo e uniamo tutti i DataFrame delle Ranking List
-        df_list = []
-        for file in EXCEL_FILES.values():
-            df_temp = carica_dati(file, sheet_name=SHEET_NAME)
-            df_list.append(df_temp)
-
-        # Concatenazione di tutti i DataFrame
-        df = pd.concat(df_list, ignore_index=True)
-
-        # Raggruppamento per Società e Somma dei Punti
-        df_societa = (
-            df.groupby(['Nazione', 'Società'])
-            .agg({'Punti': 'sum', 'Nome': 'count'})
-            .reset_index()
-            .rename(columns={'Nome': 'Numero Atleti', 'Punti': 'Punti Totali'})
-        )
-        
-        # Calcolo della Media Punti per Atleta
-        df_societa['Media Punti'] = (df_societa['Punti Totali'] / df_societa['Numero Atleti']).round(2)
-
+        dfs = []
+        for file in EXCEL_FILES.keys():
+            file_path = Path(EXCEL_FILES[file])
+            if not file_path.is_file():
+                st.warning(f"⚠️ Ranking {file} non presente.")
+                continue
+            try:
+                df_temp = carica_dati(file_path, sheet_name=SHEET_NAME)
+                dfs.append(df_temp)
+            except FileNotFoundError:
+                st.warning(f"⚠️ Ranking {file} non trovato.")
+        if dfs:
+            df = pd.concat(dfs, ignore_index=True)
     else:
-        # Carichiamo il DataFrame per la Ranking List selezionata
-        file_path = EXCEL_FILES[ranking_file]
-        df = carica_dati(file_path, sheet_name=SHEET_NAME)
+        file_path = Path(EXCEL_FILES[ranking_file])
+        if not file_path.is_file():
+            st.warning(f"⚠️ Ranking {ranking_file} non presente.")
+        else:
+            try:
+                df = carica_dati(file_path, sheet_name=SHEET_NAME)
+            except FileNotFoundError:
+                st.warning(f"⚠️ Ranking {ranking_file} non trovato.")
+    
+    if df.empty:
+        st.info("Nessun dato disponibile.")
+        return
 
-        # Raggruppamento per Società con Media Punti
-        df_societa = (
-            df.groupby(['Nazione', 'Società'])
-            .agg({'Punti': 'sum', 'Nome': 'count'})
-            .reset_index()
-            .rename(columns={'Nome': 'Numero Atleti', 'Punti': 'Punti Totali'})
-        )
+    # --- Raggruppamento per Società con Media Punti ---
+    df_societa = (
+        df.groupby(['Nazione', 'Società'])
+        .agg({'Punti': 'sum', 'Nome': 'count'})
+        .reset_index()
+        .rename(columns={'Nome': 'Numero Atleti', 'Punti': 'Punti Totali'})
+    )
 
-        # Calcolo della Media Punti per Atleta
-        df_societa['Media Punti'] = (df_societa['Punti Totali'] / df_societa['Numero Atleti']).round(2)
+    df_societa['Media Punti'] = (df_societa['Punti Totali'] / df_societa['Numero Atleti']).round(2)
 
     # --- FILTRO RICERCA SOCIETÀ ---
     ricerca_societa = st.text_input(
@@ -92,24 +93,20 @@ def classifica_societa():
         st.session_state.pagina_corrente_societa = 1
         st.session_state.reset_pagina_societa = False
 
-    # Inizializzazione dello stato per la pagina corrente
     if 'pagina_corrente_societa' not in st.session_state:
         st.session_state.pagina_corrente_societa = 1
 
-    # Numero totale di risultati e pagine
     totale_risultati = len(df_societa)
     totale_pagine = (totale_risultati - 1) // RISULTATI_PER_PAGINA + 1
     
-    # Limita la pagina corrente ai limiti disponibili
     pagina_corrente = st.session_state.pagina_corrente_societa
     pagina_corrente = max(1, min(pagina_corrente, totale_pagine))
 
-    # Selezione dei risultati per la pagina corrente
     inizio = (pagina_corrente - 1) * RISULTATI_PER_PAGINA
     fine = inizio + RISULTATI_PER_PAGINA
     df_paginato = df_societa.iloc[inizio:fine]
 
-    # Visualizzazione della Classifica
+    # --- VISUALIZZAZIONE CLASSIFICA ---
     st.markdown("<div class='classifica-container'>", unsafe_allow_html=True)
     for _, row in df_paginato.iterrows():
         posizione = f"#{row['Ranking']}"
@@ -137,7 +134,7 @@ def classifica_societa():
         """, unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
-    # Navigazione Paginazione
+    # --- NAVIGAZIONE PAGINAZIONE ---
     col1, col2 = st.columns([1, 1])
     with col1:
         if st.button("⬅️ Precedente", key="prev_societa"):
